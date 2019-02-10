@@ -4,62 +4,128 @@
 
 #include "InnerMatrix.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
 
 InnerMatrix::InnerMatrix(int size) : size(size) {
 
-    this->pointer = new float *[size];
+    this->pointer = new float* [size];
     for (int i = 0; i < size; i++) {
         this->pointer[i] = new float[size];
     }
 }
 
-void InnerMatrix::initRandomFloat() {
+void InnerMatrix::InitRandomFloat() {
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
-            this->pointer[i][j] = 300434.203f + i + j;
-
+            this->pointer[i][j] = RandomFloat();
         }
     }
 }
 
-InnerMatrix *InnerMatrix::multiplyVectorized(InnerMatrix * __restrict__ matrix2) {
 
-    auto *__restrict__ resMatrix = new InnerMatrix(this->size);
-   // #pragma vector always
-   for (int i = 0; i < size; i++) {
-       auto * matrixVectorRes = resMatrix->pointer[i];
-       for (int j = 0; j < size; j++) {
-           auto *__restrict__ matrixVector1 = this->pointer[j];
-           auto *__restrict__ matrixVector2 = matrix2->pointer[j];
-           // #pragma vector always
-           for (int k = 0; k < size; k++) {
-               matrixVectorRes[k] += matrixVector1[k] * matrixVector2[k];
-           }
-       }
-   }
+InnerMatrix* InnerMatrix::MultiplyVectorized(InnerMatrix* __restrict__ matrix) {
 
-    return resMatrix;
-}
+    auto* resultMatrix = new InnerMatrix(size);
 
-
-InnerMatrix *InnerMatrix::multiplyNotVectorized(InnerMatrix * matrix2) {
-
-    auto *__restrict__ resMatrix = new InnerMatrix(this->size);
-
-#pragma novector
+    #pragma vector always
     for (int i = 0; i < size; i++) {
-        auto * matrixVectorRes = resMatrix->pointer[i];
-        for (int j = 0; j < size; j++) {
-            auto *__restrict__ matrixVector1 = this->pointer[j];
-            auto *__restrict__ matrixVector2 = matrix2->pointer[j];
+        auto* __restrict__ matrix1Column = this->pointer[i];
+        auto* __restrict__ resultMatrixRow = resultMatrix->pointer[i];
 
-#pragma novector
+        for (int j = 0; j < size; j++) {
+            auto* __restrict__ matrix2Column = matrix->pointer[j];
+
+            #pragma vector always
             for (int k = 0; k < size; k++) {
-                matrixVectorRes[k] += matrixVector1[k] * matrixVector2[k];
+                resultMatrixRow[k] += matrix1Column[j] * matrix2Column[k];
             }
         }
     }
-
-
-    return resMatrix;
+    return resultMatrix;
 }
+
+
+InnerMatrix* InnerMatrix::MultiplyNotVectorized(InnerMatrix* matrix) {
+
+    auto* resultMatrix = new InnerMatrix(size);
+
+    #pragma novector
+    for (int i = 0; i < size; i++) {
+        auto* __restrict__ matrix1Column = this->pointer[i];
+        auto* __restrict__ resultMatrixRow = resultMatrix->pointer[i];
+
+        for (int j = 0; j < size; j++) {
+            auto* __restrict__ matrix2Column = matrix->pointer[j];
+
+            #pragma novector
+            for (int k = 0; k < size; k++) {
+                resultMatrixRow[k] += matrix1Column[j] * matrix2Column[k];
+            }
+        }
+    }
+    return resultMatrix;
+}
+
+InnerMatrix* InnerMatrix::Multiply(InnerMatrix* matrix) {
+
+    auto* resultMatrix = new InnerMatrix(size);
+
+    for (int i = 0; i < size; i++) {
+        auto* __restrict__ matrix1Column = this->pointer[i];
+        auto* __restrict__ resultMatrixRow = resultMatrix->pointer[i];
+
+        for (int j = 0; j < size; j++) {
+            auto* __restrict__ matrix2Column = matrix->pointer[j];
+
+            for (int k = 0; k < size; k++) {
+                resultMatrixRow[k] += matrix1Column[j] * matrix2Column[k];
+            }
+        }
+    }
+    return resultMatrix;
+}
+
+void InnerMatrix::AddVectorized(InnerMatrix* matrix) {
+
+    #pragma vector always
+    for (int i = 0; i < size; i++) {
+        auto* matrix1Row = this->pointer[i];
+        auto* matrix2Row = matrix->pointer[i];
+
+        #pragma vector always
+        for (int j = 0; j < size; j++) {
+            matrix1Row[j] += matrix2Row[j];
+        }
+    }
+}
+
+void InnerMatrix::AddNotVectorized(InnerMatrix* matrix) {
+
+    #pragma novector
+    for (int i = 0; i < size; i++) {
+        auto* matrix1Row = this->pointer[i];
+        auto* matrix2Row = matrix->pointer[i];
+
+        #pragma novector
+        for (int j = 0; j < size; j++) {
+            matrix1Row[j] += matrix2Row[j];
+        }
+    }
+}
+
+void InnerMatrix::ShowStdout() {
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            std::cout << " " << this->pointer[i][j];
+        }
+        std::cout << std::endl;
+    }
+}
+
+float** InnerMatrix::GetPointer() const {
+    return pointer;
+}
+
+
+#pragma clang diagnostic pop

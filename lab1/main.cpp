@@ -3,76 +3,33 @@
 #include <ctime>
 #include <random>
 #include <iomanip>
-#include "matrix/OuterMatrix.h"
+#include "matrix/BigMatrix.h"
 
 using namespace std::chrono;
 
-const int ARRAY_SIZE = 100000000;
-
 unsigned long t1, t2, t3, t4;
 
-//
-//float *multiplyNotVectorized(const float * a, const float * b, int size) {
-//
-//    auto * c = new float[size];
-//
-//    t1 = clock();
-//    #pragma novector
-//    for (int i = 0; i < size; i++) {
-//        c[i] += b[i] * a[i];
-//    }
-//    t2 = clock();
-//    return c;
-//}
-//
-//
-//float *multiplyVectorized(const float* __restrict a, const float* __restrict b, int size) {
-//
-//    auto * __restrict c = new float[size];
-//
-//    t3 = clock();
-//    #pragma vector always
-//    for (int i = 0; i < size; i++) {
-//        c[i] += b[i] * a[i];
-//    }
-//    t4 = clock();
-//
-//    return c;
-//}
-//
-//void init(float *arr, int size) {
-//    for (int i = 0; i < size; i+=100) {
-//        float a = randomFloat();
-//        for (int j = 0; j < 100; j++) {
-//            arr[i + j] = a;
-//        }
-//    }
-//}
+const int BIG_MATRIX_SIZE = 200;
+const int INNER_MATRIX_SIZE = 8;
 
 int main() {
 
-    auto* outerMatrix1 = new OuterMatrix(132);
-    auto* outerMatrix2 = new OuterMatrix(132);
-    outerMatrix1->initRandomFloat();
-    outerMatrix2->initRandomFloat();
+    auto* bigMatrix1 = new BigMatrix(BIG_MATRIX_SIZE, INNER_MATRIX_SIZE);
+    auto* bigMatrix2 = new BigMatrix(BIG_MATRIX_SIZE, INNER_MATRIX_SIZE);
+    bigMatrix1->InitRandomFloat();
+    bigMatrix2->InitRandomFloat();
 
     t3 = clock();
-    auto* res1 = outerMatrix1->multiplyVectorized(outerMatrix2);
+    auto* bigMatrixRes1 = bigMatrix1->MultiplyVectorized(bigMatrix2);
     t4 = clock();
 
-    outerMatrix1->initRandomFloat();
-    outerMatrix2->initRandomFloat();
-
     t1 = clock();
-    auto* res2 = outerMatrix1->multiplyNotVectorized(outerMatrix2);
+    auto* bigMatrixRes2 = bigMatrix1->MultiplyNotVectorized(bigMatrix2);
     t2 = clock();
 
 
-
-    std::cout << "Time not vectorized: " << double(t2 - t1) / CLOCKS_PER_SEC << std::endl;
-    std::cout << "Time     vectorized: " << double(t4 - t3) / CLOCKS_PER_SEC  << std::endl;
-
-
+    std::cout <<  std::setprecision (20) << "Time not vectorized: " << float(t2 - t1) / CLOCKS_PER_SEC << std::endl;
+    std::cout <<  std::setprecision (20) << "Time     vectorized: " << float(t4 - t3) / CLOCKS_PER_SEC  << std::endl;
 
     return 0;
 }

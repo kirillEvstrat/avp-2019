@@ -4,8 +4,8 @@ project(lab1_1)
 set(CMAKE_CXX_STANDARD 11)
 
 add_executable(lab1_1 main.cpp
-        matrix/OuterMatrix.cpp
-        matrix/OuterMatrix.h
+        matrix/BigMatrix.cpp
+        matrix/BigMatrix.h
         matrix/InnerMatrix.cpp
         matrix/InnerMatrix.h
         random/random.cpp
@@ -13,5 +13,5 @@ add_executable(lab1_1 main.cpp
 
 set(CMAKE_CXX_COMPILER "/opt/intel/bin/icpc")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wall -Wextra -fast -qopt-report=5 -qopt-report-file=stdout -qopt-report-phase=vec")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wall -Wextra -O3 -qopt-report=5 -qopt-report-file=stdout -qopt-report-phase=vec")
 

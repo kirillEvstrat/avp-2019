@@ -5,18 +5,25 @@
 #ifndef LAB1_1_INNER_MATRIX_H
 #define LAB1_1_INNER_MATRIX_H
 
+#include <iostream>
 #include "../random/random.h"
 
 class InnerMatrix {
     float **pointer;
     int size;
 
+    InnerMatrix* Multiply(InnerMatrix* matrix);
 public:
 
     explicit InnerMatrix(int size);
-    InnerMatrix* multiplyVectorized(InnerMatrix* matrix2);
-    InnerMatrix* multiplyNotVectorized(InnerMatrix* matrix2);
-    void initRandomFloat();
+    InnerMatrix* MultiplyVectorized(InnerMatrix* matrix);
+    InnerMatrix* MultiplyNotVectorized(InnerMatrix* matrix);
+    void AddVectorized(InnerMatrix* matrix);
+    void AddNotVectorized(InnerMatrix* matrix);
+    float **GetPointer() const;
+
+    void ShowStdout();
+    void InitRandomFloat();
 };
 
 

@@ -7,15 +7,15 @@
 
 #include "InnerMatrix.h"
 
-class OuterMatrix {
+class BigMatrix {
     InnerMatrix*** pointer;
     int size;
 
 public:
-    explicit OuterMatrix(int size);
-    OuterMatrix* multiplyVectorized(OuterMatrix* matrix2);
-    OuterMatrix* multiplyNotVectorized(OuterMatrix* matrix2);
-    void initRandomFloat();
+    explicit BigMatrix(int size, int innerMatrixSize);
+    BigMatrix* MultiplyVectorized(BigMatrix *matrix2);
+    BigMatrix* MultiplyNotVectorized(BigMatrix *matrix2);
+    void InitRandomFloat();
 };
 
 #endif //LAB1_1_OUTERMATRIX_H
