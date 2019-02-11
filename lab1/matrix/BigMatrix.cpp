@@ -10,6 +10,7 @@
 
 BigMatrix::BigMatrix(int size, int innerMatrixSize) {
     this->size = size;
+    this->innerMatrixSize = innerMatrixSize;
     this->pointer = new InnerMatrix**[size];
     for (int i = 0; i < size; i++) {
         this->pointer[i] = new InnerMatrix*[size];
@@ -29,9 +30,9 @@ void BigMatrix::InitRandomFloat() {
 }
 
 
-BigMatrix *BigMatrix::MultiplyVectorized(BigMatrix* matrix) {
+BigMatrix *BigMatrix::MultiplyVectorized(const BigMatrix* matrix)  {
 
-    auto* resultMatrix = new BigMatrix(size, 0);
+    auto* resultMatrix = new BigMatrix(size, innerMatrixSize);
 
 
     for (int i = 0; i < size; i++) {
@@ -51,9 +52,9 @@ BigMatrix *BigMatrix::MultiplyVectorized(BigMatrix* matrix) {
 
 
 
-BigMatrix *BigMatrix::MultiplyNotVectorized(BigMatrix *matrix) {
+BigMatrix *BigMatrix::MultiplyNotVectorized(const BigMatrix *matrix) {
 
-    auto* resultMatrix = new BigMatrix(size, 0);
+    auto* resultMatrix = new BigMatrix(size, innerMatrixSize);
 
     #pragma novector
     for (int i = 0; i < size; i++) {
@@ -72,5 +73,37 @@ BigMatrix *BigMatrix::MultiplyNotVectorized(BigMatrix *matrix) {
     return resultMatrix;
 }
 
+
+
+BigMatrix *BigMatrix::MultiplyManuallyVectorized(const BigMatrix* matrix) {
+
+    auto* resultMatrix = new BigMatrix(size, innerMatrixSize);
+
+
+    for (int i = 0; i < size; i++) {
+        auto*  matrix1Column = this->pointer[i];
+        auto* resultMatrixRow = resultMatrix->pointer[i];
+
+        for (int j = 0; j < size; j++) {
+            auto* __restrict__ matrix2Column = matrix->pointer[j];
+
+
+            for (int k = 0; k < size; k++) {
+                resultMatrixRow[k]->AddNotVectorized(matrix1Column[j]->MultiplyManuallyVectorized(matrix2Column[k]));
+            }
+        }
+    }
+    return resultMatrix;
+}
+
+
+void BigMatrix::ShowStdout() {
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            std::cout << "Matrix " << i << " " << j << std::endl;
+            this->pointer[i][j]->ShowStdout();
+        }
+    }
+}
 
 #pragma clang diagnostic pop

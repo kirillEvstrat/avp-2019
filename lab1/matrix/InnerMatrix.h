@@ -6,20 +6,24 @@
 #define LAB1_1_INNER_MATRIX_H
 
 #include <iostream>
+#include <xmmintrin.h>
+
 #include "../random/random.h"
 
 class InnerMatrix {
     float **pointer;
     int size;
 
-    InnerMatrix* Multiply(InnerMatrix* matrix);
 public:
 
     explicit InnerMatrix(int size);
-    InnerMatrix* MultiplyVectorized(InnerMatrix* matrix);
-    InnerMatrix* MultiplyNotVectorized(InnerMatrix* matrix);
-    void AddVectorized(InnerMatrix* matrix);
-    void AddNotVectorized(InnerMatrix* matrix);
+
+    InnerMatrix* MultiplyVectorized(const InnerMatrix* matrix);
+    InnerMatrix* MultiplyNotVectorized(const InnerMatrix* matrix);
+    InnerMatrix* MultiplyManuallyVectorized(const InnerMatrix* matrix);
+
+    void AddVectorized(const InnerMatrix* matrix);
+    void AddNotVectorized(const InnerMatrix* matrix);
     float **GetPointer() const;
 
     void ShowStdout();

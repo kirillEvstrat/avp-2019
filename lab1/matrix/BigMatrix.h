@@ -10,11 +10,14 @@
 class BigMatrix {
     InnerMatrix*** pointer;
     int size;
+    int innerMatrixSize;
 
 public:
     explicit BigMatrix(int size, int innerMatrixSize);
-    BigMatrix* MultiplyVectorized(BigMatrix *matrix2);
-    BigMatrix* MultiplyNotVectorized(BigMatrix *matrix2);
+    BigMatrix* MultiplyVectorized(const BigMatrix *matrix2);
+    BigMatrix* MultiplyNotVectorized(const BigMatrix *matrix2);
+    BigMatrix* MultiplyManuallyVectorized(const BigMatrix* matrix);
+    void ShowStdout();
     void InitRandomFloat();
 };
 
