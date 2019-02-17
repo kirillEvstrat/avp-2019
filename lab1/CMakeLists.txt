@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 project(lab1_1)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 add_executable(lab1_1 main.cpp
         matrix/BigMatrix.cpp
@@ -13,5 +13,5 @@ add_executable(lab1_1 main.cpp
 
 set(CMAKE_CXX_COMPILER "/opt/intel/bin/icpc")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wall -Wextra -O3 -qopt-report=5 -qopt-report-file=stdout -qopt-report-phase=vec")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -o -Wall -Wextra -O3 -qopt-report=5 -qopt-report-file=stdout -qopt-report-phase=vec")
 

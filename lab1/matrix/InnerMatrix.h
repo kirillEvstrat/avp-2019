@@ -28,6 +28,10 @@ public:
 
     void ShowStdout();
     void InitRandomFloat();
+
+    bool operator==(const InnerMatrix &rhs) const;
+
+    bool operator!=(const InnerMatrix &rhs) const;
 };
 
 

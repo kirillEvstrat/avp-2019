@@ -13,11 +13,12 @@ BigMatrix::BigMatrix(int size, int innerMatrixSize) {
     this->innerMatrixSize = innerMatrixSize;
     this->pointer = new InnerMatrix**[size];
     for (int i = 0; i < size; i++) {
-        this->pointer[i] = new InnerMatrix*[size];
+        this->pointer[i] = new InnerMatrix* [size];
         for (int j = 0; j < size; j++) {
             this->pointer[i][j] = new InnerMatrix(innerMatrixSize);
         }
     }
+
 }
 
 
@@ -30,10 +31,11 @@ void BigMatrix::InitRandomFloat() {
 }
 
 
-BigMatrix *BigMatrix::MultiplyVectorized(const BigMatrix* matrix)  {
+BigMatrix* BigMatrix::MultiplyVectorized(const BigMatrix* __restrict__ matrix) {
 
     auto* resultMatrix = new BigMatrix(size, innerMatrixSize);
 
+    const auto size = this->size;
 
     for (int i = 0; i < size; i++) {
         auto* __restrict__ matrix1Column = this->pointer[i];
@@ -51,20 +53,14 @@ BigMatrix *BigMatrix::MultiplyVectorized(const BigMatrix* matrix)  {
 }
 
 
+BigMatrix* BigMatrix::MultiplyNotVectorized(const BigMatrix* __restrict__ matrix) {
 
-BigMatrix *BigMatrix::MultiplyNotVectorized(const BigMatrix *matrix) {
-
-    auto* resultMatrix = new BigMatrix(size, innerMatrixSize);
-
-    #pragma novector
+    auto* __restrict__ resultMatrix = new BigMatrix(size, innerMatrixSize);
     for (int i = 0; i < size; i++) {
         auto* __restrict__ matrix1Column = this->pointer[i];
         auto* __restrict__ resultMatrixRow = resultMatrix->pointer[i];
-
         for (int j = 0; j < size; j++) {
             auto* __restrict__ matrix2Column = matrix->pointer[j];
-
-
             for (int k = 0; k < size; k++) {
                 resultMatrixRow[k]->AddNotVectorized(matrix1Column[j]->MultiplyNotVectorized(matrix2Column[k]));
             }
@@ -74,22 +70,22 @@ BigMatrix *BigMatrix::MultiplyNotVectorized(const BigMatrix *matrix) {
 }
 
 
+BigMatrix* BigMatrix::MultiplyManuallyVectorized(const BigMatrix* __restrict__ matrix) {
 
-BigMatrix *BigMatrix::MultiplyManuallyVectorized(const BigMatrix* matrix) {
+    const auto size = this->size;
 
-    auto* resultMatrix = new BigMatrix(size, innerMatrixSize);
-
+    auto* __restrict__ resultMatrix = new BigMatrix(size, innerMatrixSize);
 
     for (int i = 0; i < size; i++) {
-        auto*  matrix1Column = this->pointer[i];
-        auto* resultMatrixRow = resultMatrix->pointer[i];
+        auto* __restrict__ matrix1Column = this->pointer[i];
+        auto* __restrict__ resultMatrixRow = resultMatrix->pointer[i];
 
         for (int j = 0; j < size; j++) {
             auto* __restrict__ matrix2Column = matrix->pointer[j];
 
 
             for (int k = 0; k < size; k++) {
-                resultMatrixRow[k]->AddNotVectorized(matrix1Column[j]->MultiplyManuallyVectorized(matrix2Column[k]));
+                resultMatrix->pointer[i][k]->AddVectorized(this->pointer[i][j]->MultiplyManuallyVectorized(matrix->pointer[j][k]));
             }
         }
     }
@@ -104,6 +100,27 @@ void BigMatrix::ShowStdout() {
             this->pointer[i][j]->ShowStdout();
         }
     }
+}
+
+bool BigMatrix::operator==(const BigMatrix &matrix) const {
+    if (size == matrix.size && innerMatrixSize == matrix.innerMatrixSize) {
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (*this->pointer[i][j] != *matrix.pointer[i][j]) {
+                    std::cout << "BIG I: " << i << "J: " << j << std::endl;
+                    return false;
+                }
+            }
+        }
+        return true;
+    } else {
+        std::cout << "ddd";
+        return false;
+    }
+}
+
+bool BigMatrix::operator!=(const BigMatrix &rhs) const {
+    return !(rhs == *this);
 }
 
 #pragma clang diagnostic pop

@@ -17,8 +17,12 @@ public:
     BigMatrix* MultiplyVectorized(const BigMatrix *matrix2);
     BigMatrix* MultiplyNotVectorized(const BigMatrix *matrix2);
     BigMatrix* MultiplyManuallyVectorized(const BigMatrix* matrix);
+
     void ShowStdout();
     void InitRandomFloat();
+
+    bool operator==(const BigMatrix &rhs) const;
+    bool operator!=(const BigMatrix &rhs) const;
 };
 
 #endif //LAB1_1_OUTERMATRIX_H

@@ -11,5 +11,5 @@ float RandomFloat(float startVal, float endVal) {
 }
 
 float RandomFloat() {
-    return RandomFloat(-1000, 1000);
+    return RandomFloat(-10, 10);
 }
