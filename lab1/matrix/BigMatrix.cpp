@@ -83,9 +83,8 @@ BigMatrix* BigMatrix::MultiplyManuallyVectorized(const BigMatrix* __restrict__ m
         for (int j = 0; j < size; j++) {
             auto* __restrict__ matrix2Column = matrix->pointer[j];
 
-
             for (int k = 0; k < size; k++) {
-                resultMatrix->pointer[i][k]->AddVectorized(this->pointer[i][j]->MultiplyManuallyVectorized(matrix->pointer[j][k]));
+                resultMatrixRow[k]->AddVectorized(matrix1Column[j]->MultiplyManuallyVectorized(matrix2Column[k]));
             }
         }
     }
