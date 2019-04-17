@@ -2,65 +2,76 @@
 #include "cuda_runtime.h"
 #include "helper_image.h"
 
-#include <exception>
 #include <iostream>
 #include <chrono>
 #include <stack>
 
 using namespace std;
 
-const int BLOCK_SIZE = 32;
 
+const int BLOCK_SIZE = 27;
 
-//__device__ void GetMinValueFromCell(unsigned char imageMatrix[BLOCK_SIZE][BLOCK_SIZE],
-//									const int height, const int width, const int y, const int x) {
-//	const auto iMin = (y == 0) ? 0 : -1;
-//	const auto iMax = (y == height - 1) ? 0 : 1;
-//	const auto jMin = (x == 0) ? 0 : -1;
-//	const auto jMax = (x == width - 1) ? 0 : 1;
-//
-//	char minValue = imageMatrix[y][x];
-//
-//	for (auto i = iMin; i <= iMax; i++) {
-//		for (auto j = jMin; j <= jMax; j++) {
-//			if (minValue > imageMatrix[y + i][x + j]) {
-//				minValue = imageMatrix[y + i][x + j];
-//			}
-//		}
-//	}
-//
-//	imageMatrix[y][x] = minValue;
-//}
 
 __global__ void FilterGpu(unsigned char** matrix, unsigned char** resultMatrix, const int height, const int width) {
 
-	__shared__ unsigned char outputMatrix[BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ unsigned char outputMatrix[BLOCK_SIZE + 2][BLOCK_SIZE + 2];
 
 	const int xIndex = blockIdx.x * blockDim.x + threadIdx.x;
 	const int yIndex = blockIdx.y * blockDim.y + threadIdx.y;
 
 	if ((xIndex < width) && (yIndex < height)) {
-		outputMatrix[threadIdx.y][threadIdx.x] = matrix[yIndex][xIndex];
+
+		outputMatrix[threadIdx.y + 1][threadIdx.x + 1] = matrix[yIndex][xIndex];
+
+		if ((threadIdx.y == 0) && (threadIdx.x == 0) && (yIndex > 0) && (xIndex > 0)) {
+			outputMatrix[threadIdx.y][threadIdx.x] = matrix[yIndex - 1][xIndex - 1];
+		}
+		if ((threadIdx.y == 0) && (threadIdx.x == BLOCK_SIZE - 1) && (yIndex > 0) && (xIndex < width - 1)) {
+			outputMatrix[threadIdx.y][threadIdx.x + 2] = matrix[yIndex - 1][xIndex + 1];
+		}
+		if ((threadIdx.y == BLOCK_SIZE - 1) && (threadIdx.x == 0) && (yIndex < height - 1) && (xIndex > 0)) {
+			outputMatrix[threadIdx.y + 2][threadIdx.x] = matrix[yIndex - 1][xIndex + 1];
+		}
+		if ((threadIdx.y == BLOCK_SIZE - 1) && (threadIdx.x == BLOCK_SIZE - 1) && (yIndex < height - 1) && (xIndex < width - 1)) {
+			outputMatrix[threadIdx.y + 2][threadIdx.x + 2] = matrix[yIndex +  1][xIndex + 1];
+		}
+		if ((threadIdx.y == 0) && (yIndex > 0)) {
+			outputMatrix[threadIdx.y][threadIdx.x + 1] = matrix[yIndex - 1][xIndex];
+		}
+		if (threadIdx.x == 0 && xIndex > 0) {
+			outputMatrix[threadIdx.y + 1][threadIdx.x] = matrix[yIndex][xIndex - 1];
+		}
+		if (threadIdx.y == BLOCK_SIZE - 1 && yIndex < height - 1) {
+			outputMatrix[threadIdx.y + 2][threadIdx.x + 1] = matrix[yIndex + 1][xIndex];
+		}
+		if (threadIdx.x == BLOCK_SIZE - 1 && xIndex < width - 1) {
+			outputMatrix[threadIdx.y + 1][threadIdx.x + 2] = matrix[yIndex][xIndex + 1];
+		}
 		__syncthreads();
 
-		auto x = threadIdx.x;
-		auto y = threadIdx.y;
+		const auto x = threadIdx.x + 1;
+		const auto y = threadIdx.y + 1;
 
 		char minValue = outputMatrix[y][x];
+		
+		const auto iMin = (y == 0) ? 0 : -1;
+		const auto iMax = (y == height - 1) ? 0 : 1;
+		const auto jMin = (x == 0) ? 0 : -1;
+		const auto jMax = (x == width - 1) ? 0 : 1;
 
-		minValue = ((y > 0) && (x > 0) && (minValue > outputMatrix[y - 1][x - 1])) ? outputMatrix[y - 1][x - 1] : minValue;
-		minValue = ((y > 0) && (minValue > outputMatrix[y - 1][x])) ? outputMatrix[y - 1][x] : minValue;
-		minValue = ((y > 0) && (x < (BLOCK_SIZE - 1)) && (minValue > outputMatrix[y - 1][x + 1])) ? outputMatrix[y - 1][x + 1] : minValue;
-	
-		minValue = ((x > 0) && (minValue > outputMatrix[y][x - 1])) ? outputMatrix[y][x - 1] : minValue;
-		minValue = ((x < (BLOCK_SIZE - 1)) && (minValue > outputMatrix[y][x + 1])) ? outputMatrix[y][x + 1] : minValue;
-		minValue = ((y < (BLOCK_SIZE - 1)) && (x > 0) && (minValue > outputMatrix[y + 1][x - 1])) ? outputMatrix[y + 1][x - 1] : minValue;
-		minValue = ((y < (BLOCK_SIZE - 1)) && (minValue > outputMatrix[y + 1][x])) ? outputMatrix[y + 1][x] : minValue;
-		minValue = ((y < (BLOCK_SIZE - 1)) && (x < (BLOCK_SIZE - 1)) && (minValue > outputMatrix[y + 1][x + 1])) ? outputMatrix[y + 1][x + 1] : minValue;
+		for (auto i = iMin; i <= iMax; i++) {
+			for (auto j = jMin; j <= jMax; j++) {
+				if (minValue > outputMatrix[y + i][x + j]) {
+					minValue = outputMatrix[y + i][x + j];
+				}
+			}
+		}
 		__syncthreads();
+
 		outputMatrix[y][x] = minValue;
 		__syncthreads();
-		resultMatrix[yIndex][xIndex] = outputMatrix[y][x]; // outputMatrix[threadIdx.x][threadIdx.y];
+		
+		resultMatrix[yIndex][xIndex] = outputMatrix[y][x];
 	}
 }
 
@@ -71,46 +82,10 @@ class Image {
 	unsigned int height_;
 	unsigned int width_;
 	unsigned char* data_;
-	unsigned char** imageMatrixCpu_;
-	unsigned char** imageMatrixGpu_;
 	dim3 blockSize_;
 	dim3 numBlocks_;
 
-public:
-
-	explicit Image(const string filename) {
-		LoadImage(filename);
-	}
-
-	~Image() {
-		DeleteData();
-		DeleteImageMatrix();
-	}
-
-	void LoadImage(const string filename) {
-		data_ = nullptr;
-		if (!sdkLoadPGM(filename.c_str(), &data_, &width_, &height_)) {
-			cout << "Cannot read image file." << endl;
-			throw std::invalid_argument("Cannot read image file.");
-		}
-
-		this->blockSize_ = dim3(BLOCK_SIZE, BLOCK_SIZE);
-		this->numBlocks_ = dim3(height_ / BLOCK_SIZE + 1, width_ / BLOCK_SIZE + 1);
-		
-		cout << "Block size, x: " << blockSize_.x << ", y: " << blockSize_.y << endl;
-		cout << "Num of blocks, x: " << numBlocks_.x << ", y: " << numBlocks_.y << endl;
-		cout << "Width: " << width_ << endl;
-		cout << "Height: " << height_ << endl;
-	}
-
-	void SaveImage(const string filename) const {
-		if (!sdkSavePGM(filename.c_str(), data_, width_, height_)) {
-			cout << "Cannot save image file." << endl;
-			throw std::invalid_argument("Cannot save image file.");
-		}
-	}
-
-	unsigned char** InitImageMatrixCpu() const {
+	unsigned char** initImageMatrixCpu() const {
 		auto** imageMatrix = new unsigned char*[height_];
 		for (auto i = 0; i < height_; i++) {
 			imageMatrix[i] = new unsigned char[width_];
@@ -121,7 +96,7 @@ public:
 		return imageMatrix;
 	}
 
-	unsigned char** InitImageMatrixGpu() const {
+	unsigned char** initImageMatrixGpu() const {
 		unsigned char** imageMatrix;
 		cudaMallocManaged(&imageMatrix, width_ * height_ * sizeof(char*));
 		for (auto i = 0; i < height_; i++) {
@@ -133,11 +108,9 @@ public:
 		return imageMatrix;
 	}
 
-
-	void WriteImageMatrixToData(unsigned char** imageMatrix) const {
+	void writeImageMatrixToData(unsigned char** imageMatrix) const {
 		cout << "\t\t" << static_cast<int>(data_[0]);
 		for (auto i = 0; i < height_; i++) {
-			cout << endl;
 			for (auto j = 0; j < width_; j++) {
 				data_[(i * width_) + j] = imageMatrix[i][j];
 			}
@@ -145,29 +118,7 @@ public:
 		cout << "\t\t" << static_cast<int>(data_[0]);
 	}
 
-	void FilterImageCpu() {
-		imageMatrixCpu_ = InitImageMatrixCpu();
-		unsigned char** imageMatrixCpuResult_ = InitImageMatrixCpu();
-		cout << "\t\t" << static_cast<int>(imageMatrixCpu_[0][0]);
-		for (auto i = 0; i < height_; i++) {
-			for (auto j = 0; j < width_; j++) {
-				imageMatrixCpuResult_[i][j] = GetMinValueFromCell(imageMatrixCpu_,i, j);
-			}
-		}
-		cout << "\t\t" << static_cast<int>(imageMatrixCpuResult_[0][0]);
-		WriteImageMatrixToData(imageMatrixCpuResult_);
-	}
-
-	void FilterImageGpu() {
-		imageMatrixGpu_ = InitImageMatrixGpu(); 
-		unsigned char** imageMatrixGpuNew = InitImageMatrixGpu();
-		FilterGpu <<< numBlocks_, blockSize_ >>> (imageMatrixGpu_, imageMatrixGpuNew, height_, width_);
-		cudaDeviceSynchronize();
-
-		WriteImageMatrixToData(imageMatrixGpuNew);
-	}
-
-	char GetMinValueFromCell(unsigned char** imageMatrix, const int y, const int x) const {
+	char getMinValueFromCell(unsigned char** imageMatrix, const int y, const int x) const {
 		const auto iMin = (y == 0) ? 0 : -1;
 		const auto iMax = (y == height_ - 1) ? 0 : 1;
 		const auto jMin = (x == 0) ? 0 : -1;
@@ -185,17 +136,109 @@ public:
 		return minValue;
 	}
 
-
-
-	void DeleteData() const {
+	void deleteData() const {
 		delete data_;
 	}
 
-	void DeleteImageMatrix() const {
+	void deleteImageMatrixCpu(unsigned char** imageMatrix) const {
 		for (auto i = 0; i < height_; i++) {
-			delete[] imageMatrixCpu_[i];
+			delete[] imageMatrix[i];
 		}
-		delete[] imageMatrixCpu_;
+		delete[] imageMatrix;
+	}
+
+	void deleteImageMatrixGpu(unsigned char** imageMatrix) const {
+		for (auto i = 0; i < height_; i++) {
+			cudaFree(&imageMatrix[i]);
+		}
+		cudaFree(&imageMatrix);
+	}
+
+
+public:
+
+	explicit Image(const string filename) {
+		LoadImage(filename);
+	}
+
+	~Image() {
+		deleteData();
+	}
+
+	void LoadImage(const string filename) {
+		data_ = nullptr;
+		if (!sdkLoadPGM(filename.c_str(), &data_, &width_, &height_)) {
+			cout << "Cannot read image file." << endl;
+			throw std::invalid_argument("Cannot read image file.");
+		}
+
+		this->blockSize_ = dim3(BLOCK_SIZE, BLOCK_SIZE);
+		this->numBlocks_ = dim3(width_ / BLOCK_SIZE + 1, height_ / BLOCK_SIZE + 1);
+		
+		cout << "Block size, x: " << blockSize_.x << ", y: " << blockSize_.y << endl;
+		cout << "Num of blocks, x: " << numBlocks_.x << ", y: " << numBlocks_.y << endl;
+		cout << "Width: " << width_ << endl;
+		cout << "Height: " << height_ << endl;
+	}
+
+	void SaveImage(const string filename) const {
+		if (!sdkSavePGM(filename.c_str(), data_, width_, height_)) {
+			cout << "Cannot save image file." << endl;
+			throw std::invalid_argument("Cannot save image file.");
+		}
+	}
+
+	void FilterImageGpu() const {
+		auto** imageMatrixGpu = initImageMatrixGpu();
+		auto** imageMatrixGpuResult = initImageMatrixGpu();
+		
+		float time = 0;
+		cudaEvent_t start;
+		cudaEvent_t stop;
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+
+		cudaEventRecord(start, nullptr);
+		FilterGpu <<< numBlocks_, blockSize_ >>> (imageMatrixGpu, imageMatrixGpuResult, height_, width_);
+		cudaEventRecord(stop, nullptr);
+		cudaEventSynchronize(stop);
+
+		cudaEventElapsedTime(&time, start, stop);
+		cudaDeviceSynchronize();
+		cout << "Time GPU: " << time << " ms. " << endl;
+		cout << "Error: " << cudaGetErrorString(cudaGetLastError()) << endl;
+
+		cudaEventDestroy(start);
+		cudaEventDestroy(stop);
+		
+		cudaDeviceSynchronize();
+		cout << endl << "Error: " << cudaGetErrorString(cudaGetLastError()) << endl;
+		writeImageMatrixToData(imageMatrixGpuResult);
+		
+		deleteImageMatrixGpu(imageMatrixGpu);
+		deleteImageMatrixGpu(imageMatrixGpuResult);
+	}
+
+	void FilterImageCpu() const {
+		const auto t1 = std::chrono::steady_clock::now();
+		
+		auto** imageMatrixCpu = initImageMatrixCpu();
+		auto** imageMatrixCpuResult = initImageMatrixCpu();
+
+		for (auto i = 0; i < height_; i++) {
+			for (auto j = 0; j < width_; j++) {
+				imageMatrixCpuResult[i][j] = getMinValueFromCell(imageMatrixCpu, i, j);
+			}
+		}
+
+		const auto t2 = std::chrono::steady_clock::now();
+		auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+		cout << "Time CPU: " << elapsedMs.count() << " ms" << endl;
+		cout << "Error: " << cudaGetErrorString(cudaGetLastError()) << endl;
+
+		writeImageMatrixToData(imageMatrixCpuResult);
+		deleteImageMatrixCpu(imageMatrixCpu);
+		deleteImageMatrixCpu(imageMatrixCpuResult);
 	}
 };
 
