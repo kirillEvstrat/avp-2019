@@ -348,7 +348,7 @@ public:
 		auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
 		cout << "Time CPU: " << elapsedMs.count() << " ms" << endl;
 		cout << "Error: " << cudaGetErrorString(cudaGetLastError()) << endl;
-		cout << endl << "CPU : ";
+		cout << endl << "CPU: ";
 		showPixelsStdout(imageMatrixCpu);
 		cout << endl << endl << "CPU RESULT: ";
 		showPixelsStdout(imageMatrixCpuResult);
